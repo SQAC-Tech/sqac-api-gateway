@@ -7,6 +7,9 @@ import { createRequire } from "module";
 // Portal backend is ESM and exports its app via `export default`
 import portalApp from "./SQAC_Portal/Backend/server.js";
 
+// Member-form backend is ESM too
+import memberFormApp from "./SQAC-Member-Form/backend/index.js";
+
 // Website backend is CommonJS — load it with createRequire
 const require = createRequire(import.meta.url);
 const websiteApp = require("./sqac-website/backend/server.js");
@@ -19,13 +22,17 @@ app.get("/health", (req, res) => res.json({ status: "ok", gateway: "sqac-api-gat
 // --- Routing ---
 // Requests are dispatched to the right backend WITHOUT stripping the URL,
 // so each sub-app keeps its own routes, CORS and body parsing intact.
+// Anything not matched below falls through to the Portal backend.
 const WEBSITE_PREFIXES = ["/api/data", "/api/contact", "/api/upload", "/api/health"];
+const MEMBERFORM_PREFIXES = ["/api/form", "/api/getdata"];
+
+const matches = (prefixes, path) =>
+  prefixes.some((p) => path === p || path.startsWith(p + "/"));
 
 app.use((req, res, next) => {
-  const isWebsite = WEBSITE_PREFIXES.some(
-    (p) => req.path === p || req.path.startsWith(p + "/")
-  );
-  return isWebsite ? websiteApp(req, res, next) : portalApp(req, res, next);
+  if (matches(WEBSITE_PREFIXES, req.path)) return websiteApp(req, res, next);
+  if (matches(MEMBERFORM_PREFIXES, req.path)) return memberFormApp(req, res, next);
+  return portalApp(req, res, next);
 });
 
 // Export the combined app so it can run as a Vercel serverless function
