@@ -28,17 +28,24 @@ app.use((req, res, next) => {
   return isWebsite ? websiteApp(req, res, next) : portalApp(req, res, next);
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`🚀 SQAC API Gateway running on port ${PORT}`);
+// Export the combined app so it can run as a Vercel serverless function
+// (see api/index.js). Vercel sets process.env.VERCEL automatically.
+export default app;
 
-  // Optional keep-alive (e.g. for free-tier hosts that sleep on inactivity).
-  // Set KEEPALIVE_URL to the public gateway URL to enable.
-  if (process.env.KEEPALIVE_URL) {
-    setInterval(() => {
-      fetch(`${process.env.KEEPALIVE_URL}/health`)
-        .then((r) => console.log(`[KeepAlive] ${r.status}`))
-        .catch((e) => console.error("[KeepAlive] failed:", e.message));
-    }, 14 * 60 * 1000);
-  }
-});
+// Only start a long-running HTTP server when NOT on Vercel
+// (i.e. local dev or a persistent host like Koyeb/Render).
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`🚀 SQAC API Gateway running on port ${PORT}`);
+
+    // Optional keep-alive for free-tier hosts that sleep on inactivity.
+    if (process.env.KEEPALIVE_URL) {
+      setInterval(() => {
+        fetch(`${process.env.KEEPALIVE_URL}/health`)
+          .then((r) => console.log(`[KeepAlive] ${r.status}`))
+          .catch((e) => console.error("[KeepAlive] failed:", e.message));
+      }, 14 * 60 * 1000);
+    }
+  });
+}
