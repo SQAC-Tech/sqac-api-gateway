@@ -1,0 +1,19 @@
+{
+  "name": "sqac-api-gateway",
+  "version": "1.0.0",
+  "description": "Single entry point that mounts the SQAC Portal and SQAC Website backends as one deployable API gateway.",
+  "type": "module",
+  "main": "gateway.js",
+  "scripts": {
+    "start": "node gateway.js",
+    "dev": "node --watch gateway.js",
+    "postinstall": "npm install --prefix SQAC_Portal/Backend && npm install --prefix sqac-website/backend"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}

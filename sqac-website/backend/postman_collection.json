@@ -1,0 +1,80 @@
+{
+  "info": {
+    "_postman_id": "8f7ab083-xxxx-xxxx-xxxx-8db409f3a999",
+    "name": "Excel Mongo API",
+    "description": "Postman collection for testing Excel to MongoDB backend with Cloudinary integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Data",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/data",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "data"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Specific Field Data",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/data/field/Name",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "data", "field", "Name"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Upload Image to Cloudinary and update document",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": ""
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/upload/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "upload", ":id"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
