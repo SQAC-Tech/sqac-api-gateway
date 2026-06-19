@@ -16,8 +16,11 @@ const websiteApp = require("./sqac-website/backend/server.js");
 
 const app = express();
 
-// Gateway health check
+// Gateway health check + root (root must NOT fall through to portal auth)
 app.get("/health", (req, res) => res.json({ status: "ok", gateway: "sqac-api-gateway" }));
+app.get("/", (req, res) =>
+  res.json({ status: "ok", gateway: "sqac-api-gateway", hint: "use /api/* endpoints" })
+);
 
 // --- Routing ---
 // Requests are dispatched to the right backend WITHOUT stripping the URL,

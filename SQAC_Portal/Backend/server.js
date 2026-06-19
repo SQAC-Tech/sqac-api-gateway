@@ -158,12 +158,11 @@ app.get("/api/ping", (req, res) => {
 });
 
 // Database Connection (no app.listen — the gateway owns the HTTP server)
+// Don't process.exit on failure — in serverless that crashes the whole
+// function (every route 500s). Just log; routes will surface their own errors.
 connectDB()
   .then(() => console.log("Portal: Connected to MongoDB"))
-  .catch((err) => {
-    console.error("Portal MongoDB connection error:", err);
-    process.exit(1);
-  });
+  .catch((err) => console.error("Portal MongoDB connection error:", err));
 
 // Exported so gateway.js can mount this app under the single entry point
 export default app;
