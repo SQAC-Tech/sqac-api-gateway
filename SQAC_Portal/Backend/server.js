@@ -58,6 +58,7 @@ import certificateRoutes from "./src/routes/certificate.routes.js";
 import projectRoutes from "./src/routes/project.routes.js";
 import momRoutes from "./src/routes/mom.routes.js";
 import cocRoutes from "./src/routes/coc.routes.js";
+import { getCOCDocument } from "./src/controllers/coc.controller.js";
 
 const app = express();
 
@@ -96,6 +97,9 @@ app.post("/password/reset", resetpassword);
 
 // Certificates (Public and Protected inside)
 app.use("/api/certificate", certificateRoutes);
+
+// COC document — public so the iframe in AcceptCOC can load it cross-origin without auth
+app.get("/api/coc/document", getCOCDocument);
 
 // --- Protected Routes ---
 app.use(authenticateToken); // Apply to all routes below

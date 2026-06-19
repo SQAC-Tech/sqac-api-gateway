@@ -1,7 +1,12 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import User from "../models/User.js";
 import COCAcceptance from "../models/COCAcceptance.js";
 import { generateSignedCOC } from "../lib/pdfService.js";
 import { CURRENT_COC_VERSION } from "../config/cocPdfConfig.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const COC_PDF_PATH = path.join(__dirname, "../../public/coc.pdf");
 
 const ROLE_LABELS = {
   secretary: "Secretary",
@@ -201,6 +206,16 @@ export const getCOCRecords = async (req, res) => {
 };
 
 // ── GET /api/coc/records/:userId/pdf ─────────────────────────────────────────
+// Public — serves the blank COC PDF for members to read (no auth, used in iframe).
+export const getCOCDocument = (req, res) => {
+  res.sendFile(COC_PDF_PATH, (err) => {
+    if (err) {
+      console.error("COC document serve error:", err);
+      res.status(500).json({ error: "Could not load COC document." });
+    }
+  });
+};
+
 // Secretary only — stream the stored signed PDF from MongoDB.
 export const getCOCPdf = async (req, res) => {
   try {
