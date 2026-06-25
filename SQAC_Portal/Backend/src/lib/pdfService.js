@@ -7,9 +7,9 @@ import { cocPdfConfig } from "../config/cocPdfConfig.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const COC_PDF_PATH = join(
-  __dirname, "..", "..", "..", "Frontend", "public", "SQAC Code of Conduct.pdf"
-);
+// Source COC PDF lives in the backend's own public folder so it works
+// regardless of whether the Frontend folder is deployed alongside it.
+const COC_PDF_PATH = join(__dirname, "..", "..", "public", "coc.pdf");
 
 /**
  * Generate a signed COC PDF.
