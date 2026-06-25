@@ -127,6 +127,22 @@ const createUser = async (req, res) => {
     });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
+
+    // Mongoose schema validation (e.g. bio too long, missing required field)
+    if (err.name === "ValidationError") {
+      const firstError = Object.values(err.errors)[0];
+      return res.status(400).json({
+        error: firstError?.message || "Invalid registration details",
+      });
+    }
+
+    // Duplicate key (race with the existence check above on email / regNum)
+    if (err.code === 11000) {
+      return res.status(409).json({
+        error: "User with this email or registration number already exists",
+      });
+    }
+
     res.status(500).json({ error: "Server error" });
   }
 };
