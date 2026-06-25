@@ -10,7 +10,8 @@ const PERMISSIONS = {
   // Secretary + Joint Sec
   SEND_MASS_MAIL:    ['secretary', 'joint_secretary'],
 
-  // All leads except associate_lead and member
+  // Projects — domain_lead and above may create/assign
+  CREATE_PROJECT:    ['secretary', 'joint_secretary', 'technical_lead', 'project_lead', 'corp_lead', 'domain_lead'],
   ASSIGN_PROJECT:    ['secretary', 'joint_secretary', 'technical_lead', 'project_lead', 'corp_lead', 'domain_lead'],
   SCHEDULE_MEET:     ['secretary', 'joint_secretary', 'technical_lead', 'project_lead', 'corp_lead', 'domain_lead'],
   SEND_NOTICE:       ['secretary', 'joint_secretary', 'technical_lead', 'project_lead', 'corp_lead', 'domain_lead'],

@@ -2,6 +2,7 @@ import MemberProfile from "../models/MemberProfile.js";
 import Project from "../models/Project.js";
 import sendMail from "../lib/mailer.js";
 import { projectAssignedEmail } from "../lib/email-templates.js";
+import { generateProjectFromPrompt } from "../lib/groq.js";
 
 // ─── GET ALL MEMBERS WITH PROFILES ─────────────────────────────────────────
 export const getAllProfiles = async (req, res) => {
@@ -62,6 +63,26 @@ export const createProject = async (req, res) => {
   } catch (error) {
     console.error("CREATE PROJECT ERROR:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ─── AI PROJECT GENERATION (reuses the Groq client) ────────────────────────
+export const generateProjectWithAI = async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || prompt.trim().length < 10) {
+      return res.status(400).json({ message: "Prompt too short. Describe the project in more detail." });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(503).json({ message: "AI service not configured. Please add GROQ_API_KEY to .env" });
+    }
+
+    const structured = await generateProjectFromPrompt(prompt.trim());
+    res.json({ success: true, data: structured });
+  } catch (error) {
+    console.error("AI GENERATE PROJECT ERROR:", error);
+    res.status(500).json({ message: "AI generation failed.", error: error.message });
   }
 };
 

@@ -19,8 +19,10 @@ import {
   getMyProjects,
   postThreadMessage,
   completeProject,
+  generateProjectWithAI,
 } from "../controllers/project.controller.js";
 import { requireRole } from "../middleware/role.middleware.js";
+import { requirePermission } from "../middleware/permissions.middleware.js";
 
 const router = Router();
 
@@ -35,18 +37,21 @@ router.put("/members/:id/skills", requireRole("admin", "subadmin"), updateMember
 router.get("/members/email/:email", getProfileByEmail);
 router.post("/members/upsert", requireRole("admin", "subadmin"), upsertProfile);
 
+// AI project generation (reuses the Groq client) — gate same as creation
+router.post("/ai-generate", requirePermission("CREATE_PROJECT"), generateProjectWithAI);
+
 // Projects CRUD
-router.post("/", requireRole("admin", "subadmin"), createProject);
+router.post("/", requirePermission("CREATE_PROJECT"), createProject);
 router.get("/", getAllProjects);
 router.get("/my-projects", getMyProjects);
 router.get("/:id", getProjectById);
-router.put("/:id", requireRole("admin", "subadmin"), updateProject);
-router.put("/:id/complete", requireRole("admin", "subadmin"), completeProject);
-router.delete("/:id", requireRole("admin", "subadmin"), deleteProject);
+router.put("/:id", requirePermission("CREATE_PROJECT"), updateProject);
+router.put("/:id/complete", requirePermission("ASSIGN_PROJECT"), completeProject);
+router.delete("/:id", requirePermission("CREATE_PROJECT"), deleteProject);
 
 // Recommendation Engine
-router.post("/:projectId/recommend", requireRole("admin", "subadmin"), recommendTeam);
-router.post("/:id/unassign", requireRole("admin", "subadmin"), unassignTeam);
+router.post("/:projectId/recommend", requirePermission("ASSIGN_PROJECT"), recommendTeam);
+router.post("/:id/unassign", requirePermission("ASSIGN_PROJECT"), unassignTeam);
 
 // Submissions & Threads
 router.post("/:id/submissions", addSubmission);
