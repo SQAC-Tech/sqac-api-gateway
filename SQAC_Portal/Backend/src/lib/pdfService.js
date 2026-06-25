@@ -83,12 +83,15 @@ export async function generateSignedCOC({ signatureBase64, memberName, position,
     ? await pdfDoc.embedPng(sigBuffer)
     : await pdfDoc.embedJpg(sigBuffer);
 
-  page.drawImage(sigImage, {
-    x:      fields.signature.x,
-    y:      fields.signature.y,
-    width:  fields.signature.width,
-    height: fields.signature.height,
-  });
+  // Contain-fit the signature inside its box, preserving aspect ratio.
+  const box   = fields.signature;
+  const scale = Math.min(box.width / sigImage.width, box.height / sigImage.height);
+  const drawW = sigImage.width  * scale;
+  const drawH = sigImage.height * scale;
+  const drawX = box.x + (box.width  - drawW) / 2; // center horizontally
+  const drawY = box.y + (box.height - drawH) / 2; // center vertically
+
+  page.drawImage(sigImage, { x: drawX, y: drawY, width: drawW, height: drawH });
 
   return pdfDoc.save();
 }
