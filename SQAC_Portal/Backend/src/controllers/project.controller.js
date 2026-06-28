@@ -439,11 +439,11 @@ export const getDashboardStats = async (req, res) => {
   try {
     const [totalMembers, availableMembers, assignedMembers, onBreakMembers, totalProjects, unassignedProjects, inProgressProjects, completedProjects] =
       await Promise.all([
-        MemberProfile.countDocuments(),
+        MemberProfile.estimatedDocumentCount(), // metadata count — no scan
         MemberProfile.countDocuments({ status: "available" }),
         MemberProfile.countDocuments({ status: "assigned" }),
         MemberProfile.countDocuments({ status: "on_break" }),
-        Project.countDocuments(),
+        Project.estimatedDocumentCount(),       // metadata count — no scan
         Project.countDocuments({ status: "unassigned" }),
         Project.countDocuments({ status: "in_progress" }),
         Project.countDocuments({ status: "completed" }),
