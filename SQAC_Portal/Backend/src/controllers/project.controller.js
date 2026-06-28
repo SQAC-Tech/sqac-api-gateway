@@ -538,15 +538,16 @@ export const getMyProjects = async (req, res) => {
   try {
     const userId = req.user.id;
     const memberProfile = await MemberProfile.findOne({ userId });
-    
-    let query = {};
-    if (memberProfile) {
-      query = { "teamMembers.memberId": memberProfile._id };
-    } else {
-      return res.status(404).json({ message: "Member profile not found." });
+
+    // No projects profile yet → the user simply has no assigned projects.
+    // Return an empty list rather than a 404 (which the dashboard/MyProjects
+    // treat as an error and which spammed the network log).
+    if (!memberProfile) {
+      return res.json([]);
     }
 
-    const projects = await Project.find(query).populate("teamMembers.memberId", "fullName email");
+    const projects = await Project.find({ "teamMembers.memberId": memberProfile._id })
+      .populate("teamMembers.memberId", "fullName email");
     res.json(projects);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
