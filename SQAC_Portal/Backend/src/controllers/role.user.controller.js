@@ -53,6 +53,12 @@ const verifyOTP = async (email, inputCode) => {
 };
 
 const uploadProfileImageToCloudinary = async (imageFile, userId) => {
+  // Fail clearly if the portal's Cloudinary credentials aren't configured,
+  // instead of POSTing to a malformed URL and surfacing a generic 500.
+  if (!process.env.CLOUDINARY_CLOUD || !process.env.CLOUDINARY_API || !process.env.CLOUDINARY_SECRET) {
+    throw new Error("Image upload is not configured (missing CLOUDINARY_CLOUD/API/SECRET).");
+  }
+
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = "sqac-portal/profile-images";
   const publicId = `user-${userId}-${timestamp}`;
@@ -210,15 +216,31 @@ export const editprofile = async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (imageFile !== undefined) {
-      user.image = await uploadProfileImageToCloudinary(imageFile, req.userId);
-    } else if (image !== undefined) {
-      user.image = image;
-    }
+    // Save text fields first so a failed image upload doesn't discard them.
     if (socials !== undefined) user.socials = socials;
     if (bio !== undefined) user.bio = bio;
 
+    let imageError = null;
+    if (imageFile !== undefined) {
+      try {
+        user.image = await uploadProfileImageToCloudinary(imageFile, req.userId);
+      } catch (e) {
+        imageError = e.message || "Image upload failed.";
+      }
+    } else if (image !== undefined) {
+      user.image = image;
+    }
+
     await user.save();
+
+    if (imageError) {
+      // Text fields saved, but the photo didn't — tell the client clearly.
+      return res.status(502).json({
+        message: imageError,
+        imageFailed: true,
+        user: { ...user.toObject(), password: undefined },
+      });
+    }
 
     res.json({
       message: "Profile updated successfully",
@@ -228,7 +250,8 @@ export const editprofile = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("EDIT PROFILE ERROR:", error);
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
 
