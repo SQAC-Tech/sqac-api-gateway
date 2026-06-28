@@ -182,16 +182,22 @@ export const resetpassword = async (req, res) => {
 
 export const editprofile = async (req, res) => {
   try {
-    const { image, imageFile, socials, bio } = req.body;
+    const {
+      image,
+      imageFile,
+      socials,
+      bio,
+      name,
+      phoneNumber,
+      department,
+      section,
+      residenceType,
+      facultyAdvisorName,
+      facultyAdvisorNo,
+    } = req.body;
 
-    const forbiddenFields = [
-      "role",
-      "position",
-      "password",
-      "email",
-      "name",
-      "attendance",
-    ];
+    // Fields that can never be updated through this self-service route.
+    const forbiddenFields = ["role", "position", "password", "email", "attendance"];
     const invalidUpdates = Object.keys(req.body).filter((key) =>
       forbiddenFields.includes(key),
     );
@@ -202,23 +208,30 @@ export const editprofile = async (req, res) => {
       });
     }
 
+    // Faculty Advisor fields are required whenever they are provided.
+    // If the caller sends one but not the other, reject early.
     if (
-      image === undefined &&
-      imageFile === undefined &&
-      socials === undefined &&
-      bio === undefined
+      (facultyAdvisorName !== undefined || facultyAdvisorNo !== undefined) &&
+      (!facultyAdvisorName?.trim() || !facultyAdvisorNo?.trim())
     ) {
       return res.status(400).json({
-        message: "Provide image, bio, or socials to update",
+        message: "Faculty Advisor name and contact are both required.",
       });
     }
 
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Save text fields first so a failed image upload doesn't discard them.
-    if (socials !== undefined) user.socials = socials;
-    if (bio !== undefined) user.bio = bio;
+    // Apply all permitted text fields.
+    if (name !== undefined)               user.name               = name.trim();
+    if (phoneNumber !== undefined)        user.phoneNumber        = phoneNumber.trim();
+    if (department !== undefined)         user.department         = department.trim();
+    if (section !== undefined)            user.section            = section.trim();
+    if (residenceType !== undefined)      user.residenceType      = residenceType;
+    if (facultyAdvisorName !== undefined) user.facultyAdvisorName = facultyAdvisorName.trim();
+    if (facultyAdvisorNo !== undefined)   user.facultyAdvisorNo   = facultyAdvisorNo.trim();
+    if (socials !== undefined)            user.socials            = socials;
+    if (bio !== undefined)                user.bio                = bio;
 
     let imageError = null;
     if (imageFile !== undefined) {
