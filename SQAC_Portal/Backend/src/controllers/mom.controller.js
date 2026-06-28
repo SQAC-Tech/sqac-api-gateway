@@ -2,6 +2,7 @@ import MOM from "../models/MOM.js";
 import Meeting from "../models/Meeting.js";
 import User from "../models/User.js";
 import { generateMOMFromPrompt } from "../lib/groq.js";
+import { buildMOMPdf } from "../lib/momPdfService.js";
 import sendMail from "../lib/mailer.js";
 import { momCreatedEmail } from "../lib/email-templates.js";
 
@@ -93,6 +94,24 @@ export const createMOM = async (req, res) => {
   } catch (error) {
     console.error("CREATE MOM ERROR:", error);
     res.status(500).json({ message: "Server error.", error: error.message });
+  }
+};
+
+// ─── Generate MOM PDF on the SQAC letterhead ─────────────────────────────────
+export const generateMOMPdf = async (req, res) => {
+  try {
+    const mom = req.body || {};
+    if (!mom.title && !mom.date) {
+      return res.status(400).json({ message: "MOM data is required." });
+    }
+    const bytes = await buildMOMPdf(mom);
+    const safe = String(mom.title || "meeting").replace(/[^\w-]+/g, "_").slice(0, 60);
+    res.set("Content-Type", "application/pdf");
+    res.set("Content-Disposition", `attachment; filename="MOM_${safe}.pdf"`);
+    res.send(Buffer.from(bytes));
+  } catch (error) {
+    console.error("MOM PDF ERROR:", error);
+    res.status(500).json({ message: "Failed to generate MOM PDF.", error: error.message });
   }
 };
 

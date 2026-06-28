@@ -19,6 +19,7 @@ const attendeeSnapshotSchema = new mongoose.Schema(
     coreDomain: String,
     subDomain: String,
     email: String,
+    external: { type: Boolean, default: false }, // guest not registered on the portal
   },
   { _id: false }
 );
