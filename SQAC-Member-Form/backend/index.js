@@ -115,20 +115,21 @@ app.get("/health", (req, res) => {
 
 
 
+// Public directory — never expose PII (srmmail, phone). Anyone can hit this.
+const PUBLIC_MEMBER_PROJECTION = "-srmmail -pnumber";
+
 app.get('/api/getdata', async(req,res)=>{
-  const data = await Member.find()
+  const data = await Member.find().select(PUBLIC_MEMBER_PROJECTION)
   res.json({
     data:data
   })
-
-  console.log(data)
 })
 
 app.get('/api/getdata/:slug', async(req,res)=>{
   const {slug} = req.params
 
-  
-  const member = await Member.findOne({ slug });
+
+  const member = await Member.findOne({ slug }).select(PUBLIC_MEMBER_PROJECTION);
 
   if (!member) {
     return res.status(404).json({

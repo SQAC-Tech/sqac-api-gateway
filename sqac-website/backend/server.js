@@ -6,6 +6,8 @@ const multer = require('multer');
 const cron = require('node-cron');
 const xlsx = require('xlsx');
 
+const jwt = require('jsonwebtoken');
+
 const Data = require('./models/Data');
 const Contact = require('./models/Contact');
 const { storage } = require('./utils/cloudinary');
@@ -14,6 +16,22 @@ const upload = multer({ storage });
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Reuse the Portal's login session: it sets a `session` cookie (a JWT signed
+// with JWT_SECRET) on the shared gateway domain, so admin-only endpoints here
+// can require a valid logged-in user without their own auth system.
+function requireAuth(req, res, next) {
+  const cookieHeader = req.headers.cookie || '';
+  const match = cookieHeader.match(/(?:^|;\s*)session=([^;]+)/);
+  const token = (match && match[1]) || req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Not authenticated' });
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ message: 'Invalid session' });
+  }
+}
 
 mongoose.connect(process.env.WEBSITE_MONGO_URI || process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Website: MongoDB connected'))
@@ -38,7 +56,7 @@ app.get('/api/data/field/:fieldName', async (req, res) => {
   }
 });
 
-app.post('/api/upload/:id', upload.single('image'), async (req, res) => {
+app.post('/api/upload/:id', requireAuth, upload.single('image'), async (req, res) => {
   try {
     const id = req.params.id;
     const imageUrl = req.file.path;
@@ -84,7 +102,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-app.get('/api/contact', async (req, res) => {
+app.get('/api/contact', requireAuth, async (req, res) => {
   const contacts = await Contact.find().sort({ submittedAt: -1 });
   res.json(contacts);
 });
