@@ -16,6 +16,54 @@ import {
   newNoticeEmail,
   warningEmail,
 } from "../lib/email-templates.js";
+
+// ── Meeting visibility ───────────────────────────────────────────────────────
+// A meeting scoped to a subdomain (e.g. "Web Development") is visible to that
+// subdomain plus everyone above it in the same division — the division lead
+// (technical_lead / corp_lead) and top leadership. It is NOT visible to sibling
+// subdomains (AI/ML, App Dev…) or the other division.
+const TECH_SUBS = ["Web Development", "App Development", "AI/ML"];
+const CORP_SUBS = ["Events", "Media", "Public Relations", "Sponsorships", "Creatives"];
+const TOP_ROLES = ["secretary", "joint_secretary", "project_lead"]; // oversee everything
+
+// Mongo filter: which meetings the given user is allowed to see.
+const visibleMeetingsFilter = (user) => {
+  const { role, coreDomain: core, subDomain: sub } = user;
+
+  // Top leadership / broad roles see every meeting.
+  if (TOP_ROLES.includes(role) || core === "All") return {};
+
+  const scopes = new Set(["all"]);
+  if (isBoardMember(role)) scopes.add("board");
+
+  if (core === "Technical") {
+    scopes.add("technical");
+    if (role === "technical_lead") TECH_SUBS.forEach((s) => scopes.add(s));
+    else if (sub) scopes.add(sub);
+  } else if (core === "Corporate") {
+    scopes.add("corporate");
+    if (role === "corp_lead") CORP_SUBS.forEach((s) => scopes.add(s));
+    else if (sub) scopes.add(sub);
+  }
+
+  return { teamScope: { $in: [...scopes] } };
+};
+
+// Mongo filter: who should be notified about a meeting of the given scope
+// (mirrors visibleMeetingsFilter so emails match what people can see).
+const meetingAudienceFilter = (scope) => {
+  const broad = [{ role: { $in: TOP_ROLES } }, { coreDomain: "All" }];
+  if (!scope || scope === "all") return { approved: true };
+  if (scope === "board") return { approved: true, role: { $in: BOARD_ROLES } };
+  if (scope === "technical") return { approved: true, $or: [{ coreDomain: "Technical" }, ...broad] };
+  if (scope === "corporate") return { approved: true, $or: [{ coreDomain: "Corporate" }, ...broad] };
+
+  const or = [{ subDomain: scope }, ...broad];
+  if (TECH_SUBS.includes(scope)) or.push({ role: "technical_lead" });
+  else if (CORP_SUBS.includes(scope)) or.push({ role: "corp_lead" });
+  return { approved: true, $or: or };
+};
+
 const getmembers = async (req, res) => {
   if (!PERMISSIONS.VIEW_MEMBERS.includes(req.user.role)) {
     return res.status(403).json({ message: "Not authorized" });
@@ -295,18 +343,11 @@ const createMeet = async (req, res) => {
     });
     await meet.save();
 
-    // Fire-and-forget: email relevant members about the new meeting
+    // Fire-and-forget: email the same audience that can see the meeting
     (async () => {
       try {
-        const scope = (teamScope || "all").toLowerCase();
-        let userFilter = { approved: true };
-        if (scope === "technical") userFilter.coreDomain = "Technical";
-        else if (scope === "corporate") userFilter.coreDomain = "Corporate";
-        else if (scope === "board") userFilter.role = { $in: BOARD_ROLES };
-        else if (scope !== "all") userFilter.subDomain = teamScope;
-
         const calendarLink = generateGoogleCalendarLink(meet);
-        const recipients = await User.find(userFilter, "email name").lean();
+        const recipients = await User.find(meetingAudienceFilter(teamScope), "email name").lean();
         await Promise.allSettled(
           recipients.map((u) =>
             sendMail({
@@ -366,9 +407,8 @@ const editMeet = async (req, res) => {
 
 const getMeet = async (req, res) => {
   try {
-    // Board meetings are only visible to board members.
-    const visibility = isBoardMember(req.user.role) ? {} : { teamScope: { $ne: "board" } };
-    const meets = await Meeting.find(visibility).populate("createdBy", "name email");
+    // Only return meetings the user's role/domain is allowed to see.
+    const meets = await Meeting.find(visibleMeetingsFilter(req.user)).populate("createdBy", "name email");
     res.status(200).json(meets);
   } catch (error) {
     res.status(500).json({ error: error.message });
