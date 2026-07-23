@@ -50,6 +50,7 @@ const MOMSchema = new mongoose.Schema(
       type: String,
       enum: [
         "all",
+        "board",
         "technical",
         "corporate",
         "Web Development",

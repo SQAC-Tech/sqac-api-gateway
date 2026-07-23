@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { BOARD_ROLES } from "../middleware/permissions.middleware.js";
 
 
 const userSchema = new mongoose.Schema(
@@ -101,4 +102,14 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Board membership is derived from role and exposed on every serialized user
+// (login, profile, member lists, approvals…) so the UI can show a Board badge
+// everywhere without a stored field or migration.
+userSchema.virtual("isBoardMember").get(function () {
+  return BOARD_ROLES.includes(this.role);
+});
+userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true });
+
 export default mongoose.model("User", userSchema);

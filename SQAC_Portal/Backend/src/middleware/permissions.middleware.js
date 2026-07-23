@@ -34,6 +34,12 @@ const PERMISSIONS = {
 // All non-member roles (for admin route guards)
 export const ALL_ADMIN_ROLES = ['secretary', 'joint_secretary', 'technical_lead', 'project_lead', 'corp_lead', 'domain_lead', 'associate_lead'];
 
+// Board Members — the club's leadership circle. Membership is derived purely
+// from role, so anyone who already holds one of these roles is automatically
+// part of the board (no migration needed).
+export const BOARD_ROLES = ['secretary', 'joint_secretary', 'technical_lead', 'corp_lead', 'project_lead'];
+export const isBoardMember = (role) => BOARD_ROLES.includes(role);
+
 /**
  * Middleware factory: checks if user's role has the given permission.
  * Usage: requirePermission('APPROVE_MEMBER')

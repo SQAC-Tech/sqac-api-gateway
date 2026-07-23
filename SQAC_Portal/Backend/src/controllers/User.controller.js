@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 import sendMail from "../lib/mailer.js";
+import { BOARD_ROLES } from "../middleware/permissions.middleware.js";
 import {
   registrationReceivedEmail,
   newRegistrationAlertEmail,
@@ -185,6 +186,7 @@ const loginUser = async (req, res) => {
         coreDomain: user.coreDomain,
         subDomain: user.subDomain,
         role: user.role,
+        isBoardMember: BOARD_ROLES.includes(user.role),
         cocAccepted: user.cocAccepted === true,
         profileCompleted: user.profileCompleted === true,
       },

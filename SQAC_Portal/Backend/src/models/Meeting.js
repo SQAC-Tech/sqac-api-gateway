@@ -14,11 +14,12 @@ const MeetingSchema = new mongoose.Schema(
     // Who created this meeting
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
-    // Scope: "all" | "technical" | "corporate" | sub-domain string
+    // Scope: "all" | "board" | "technical" | "corporate" | sub-domain string
     teamScope: {
       type: String,
       enum: [
         "all",
+        "board",
         "technical",
         "corporate",
         "Web Development",

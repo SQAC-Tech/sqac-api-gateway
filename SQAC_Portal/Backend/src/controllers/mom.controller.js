@@ -5,9 +5,11 @@ import { generateMOMFromPrompt } from "../lib/groq.js";
 import { buildMOMPdf } from "../lib/momPdfService.js";
 import sendMail from "../lib/mailer.js";
 import { momCreatedEmail } from "../lib/email-templates.js";
+import { BOARD_ROLES, isBoardMember } from "../middleware/permissions.middleware.js";
 
 // ─── Helper: roles that can see all MOMs ─────────────────────────────────────
-const isPrivileged = (role) => ["admin", "subadmin", "lead"].includes(role);
+// Board members are the club leadership and may view every MOM.
+const isPrivileged = (role) => isBoardMember(role);
 
 // ─── Create MOM ──────────────────────────────────────────────────────────────
 export const createMOM = async (req, res) => {
@@ -32,6 +34,11 @@ export const createMOM = async (req, res) => {
 
     if (!title || !date) {
       return res.status(400).json({ message: "Title and date are required." });
+    }
+
+    // Board-scoped minutes can only be filed by board members.
+    if (teamScope === "board" && !isBoardMember(req.user.role)) {
+      return res.status(403).json({ message: "Only board members can create board minutes." });
     }
 
     const toValidDate = (val) => {
@@ -118,8 +125,9 @@ export const generateMOMPdf = async (req, res) => {
 // ─── Get All MOMs ─────────────────────────────────────────────────────────────
 export const getAllMOMs = async (req, res) => {
   try {
-    // All activated members can see the full MOM history
-    const moms = await MOM.find()
+    // Board minutes are only visible to board members; everyone else sees the rest.
+    const visibility = isBoardMember(req.user.role) ? {} : { teamScope: { $ne: "board" } };
+    const moms = await MOM.find(visibility)
       .sort({ date: -1 })
       .populate("createdBy", "name email role")
       .populate("meetingRef", "title startDate");
@@ -235,7 +243,9 @@ export const getApprovedMembers = async (req, res) => {
       const techSubDomains = ["Web Development", "AI/ML"];
       const corpSubDomains = ["Events", "Media", "Public Relations", "Sponsorships", "Creatives"];
 
-      if (scope === "technical") {
+      if (scope === "board") {
+        filter.role = { $in: BOARD_ROLES };
+      } else if (scope === "technical") {
         filter.coreDomain = "Technical";
       } else if (scope === "corporate") {
         filter.coreDomain = "Corporate";

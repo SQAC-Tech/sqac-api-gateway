@@ -8,7 +8,7 @@ import {
 } from "../lib/MeetMail.js";
 import { generateGoogleCalendarLink } from "../lib/calender.service.js";
 import Attendance from "../models/Attendance.js";
-import { PERMISSIONS } from "../middleware/permissions.middleware.js";
+import { PERMISSIONS, BOARD_ROLES, isBoardMember } from "../middleware/permissions.middleware.js";
 import {
   approvalEmail,
   rejectionEmail,
@@ -88,10 +88,21 @@ const changerole = async (req, res) => {
     return res.status(403).json({ message: "Not authorized" });
   }
   try {
+    const VALID_ROLES = ['secretary','joint_secretary','technical_lead','project_lead','corp_lead','domain_lead','associate_lead','member'];
     const { id } = req.params;
     const { role } = req.body;
-    await User.findByIdAndUpdate(id, { role });
-    res.json({ message: "Role updated successfully" });
+
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const user = await User.findByIdAndUpdate(id, { role }, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      message: "Role updated successfully",
+      user: { _id: user._id, role: user.role, isBoardMember: BOARD_ROLES.includes(user.role) },
+    });
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }
@@ -269,6 +280,10 @@ const createMeet = async (req, res) => {
     if (!title || !startdate || !starttime || !link) {
       return res.status(400).json({ message: "Fill important fields" });
     }
+    // Board-scoped meetings can only be created by board members.
+    if (teamScope === "board" && !isBoardMember(req.user.role)) {
+      return res.status(403).json({ message: "Only board members can schedule board meetings" });
+    }
     const meet = new Meeting({
       title,
       startDate: startdate,
@@ -287,6 +302,7 @@ const createMeet = async (req, res) => {
         let userFilter = { approved: true };
         if (scope === "technical") userFilter.coreDomain = "Technical";
         else if (scope === "corporate") userFilter.coreDomain = "Corporate";
+        else if (scope === "board") userFilter.role = { $in: BOARD_ROLES };
         else if (scope !== "all") userFilter.subDomain = teamScope;
 
         const calendarLink = generateGoogleCalendarLink(meet);
@@ -350,7 +366,9 @@ const editMeet = async (req, res) => {
 
 const getMeet = async (req, res) => {
   try {
-    const meets = await Meeting.find().populate("createdBy", "name email");
+    // Board meetings are only visible to board members.
+    const visibility = isBoardMember(req.user.role) ? {} : { teamScope: { $ne: "board" } };
+    const meets = await Meeting.find(visibility).populate("createdBy", "name email");
     res.status(200).json(meets);
   } catch (error) {
     res.status(500).json({ error: error.message });
